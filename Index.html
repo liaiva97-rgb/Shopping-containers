@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏪 Container Shopping — Real Shop Edition</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', 'Segoe UI', Tahoma, sans-serif;
+    background: #f5f0fa;
+    min-height: 100vh;
+    padding: 16px;
+    color: #5a4a5a;
+    overflow-x: hidden;
+  }
+  .game-wrap { max-width: 1100px; margin: 0 auto; }
+
+  .header { text-align: center; margin-bottom: 12px; }
+  .header h1 {
+    font-size: 26px; color: #ff6b9d;
+    text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(255,107,157,0.15);
+    letter-spacing: 1px; font-weight: 800;
+  }
+  .header p { font-size: 13px; color: #a080a0; margin-top: 4px; }
+
+  /* ===== LOCATION BADGE ===== */
+  .location-badge {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: #fff; border: 3px solid #ffd6e8; border-radius: 20px;
+    padding: 6px 18px; margin: 0 auto 12px; width: fit-content;
+    box-shadow: 0 3px 0 #ffd6e8; font-weight: 800; color: #ff6b9d;
+    font-size: 14px;
+  }
+  .location-badge .loc-icon {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .stat {
+    background: #fff; border: 3px solid #ffd6e8; border-radius: 16px;
+    padding: 8px 6px; text-align: center; box-shadow: 0 3px 0 #ffd6e8;
+    font-size: 11px; font-weight: 800; color: #a080a0;
+  }
+  .stat span { display: block; font-size: 20px; color: #ff6b9d; margin-top: 2px; }
+  #timerBox.warn span { color: #ff3d3d; animation: pulse 0.5s infinite; }
+  @keyframes pulse { 50% { transform: scale(1.2); } }
+
+  .difficulty { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+  .diff-btn {
+    padding: 6px 18px; border-radius: 20px; border: 3px solid #b8e6ff;
+    background: #fff; color: #5a9ac0; cursor: pointer; font-weight: 800;
+    font-size: 13px; font-family: inherit; box-shadow: 0 3px 0 #b8e6ff;
+    transition: all 0.15s;
+  }
+  .diff-btn.active {
+    background: #b8e6ff; color: #fff;
+    transform: translateY(2px); box-shadow: 0 1px 0 #b8e6ff;
+  }
+
+  .list-card {
+    background: #fffbe6; border: 3px dashed #ffd166; border-radius: 16px;
+    padding: 10px 14px; margin-bottom: 14px; box-shadow: 0 3px 0 #ffd166;
+  }
+  .list-card h3 { font-size: 14px; color: #e8a33d; margin-bottom: 6px; }
+  .list-card ul { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .list-card li {
+    background: #fff; padding: 4px 10px; border-radius: 20px;
+    border: 2px solid #ffd166; font-size: 12px; font-weight: 700;
+    color: #8a6a3a; display: flex; align-items: center; gap: 4px;
+  }
+  .list-card li svg { width: 18px; height: 18px; }
+  .list-card li.done {
+    background: #b8f0d0; border-color: #6bd39c; color: #3a8a5a;
+    text-decoration: line-through; opacity: 0.8;
+  }
+
+  /* ===== SHOP SCENE (главное!) ===== */
+  .shop-scene {
+    position: relative;
+    border-radius: 24px; margin-bottom: 14px;
+    border: 4px solid #fff; overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 6px 0 rgba(0,0,0,0.06);
+    min-height: 420px;
+    transition: min-height 0.3s;
+    background: #ccc;
+  }
+
+  /* Фото-фон локации */
+  .loc-bg {
+    position: absolute; inset: 0;
+    z-index: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: opacity 0.6s, transform 0.6s;
+  }
+  .loc-bg::after {
+    /* Затемняющая вуаль для читаемости */
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.55) 100%);
+  }
+
+  .scene-content {
+    position: relative; z-index: 2;
+    padding: 20px 20px 0;
+  }
+
+  .shelves {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+    gap: 8px 8px; margin-bottom: 12px;
+    background: rgba(255,255,255,0.75);
+    border-radius: 16px; padding: 12px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  }
+
+  .item {
+    background: #fff; border-radius: 12px; padding: 6px 4px 4px;
+    text-align: center; cursor: grab; transition: all 0.15s;
+    border: 2px solid #ffe8f0; user-select: none;
+    box-shadow: 0 3px 0 #ffe8f0; position: relative;
+  }
+  .item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 0 #ffe8f0, 0 8px 15px rgba(255,107,157,0.25);
+  }
+  .item:active { cursor: grabbing; }
+  .item.dragging { opacity: 0.4; transform: scale(0.9); }
+  .item.collected { opacity: 0; transform: scale(0); pointer-events: none; transition: all 0.5s; }
+  .item .pic {
+    width: 54px; height: 54px; margin: 0 auto 2px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .item .pic svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.12)); }
+  .item .name { font-size: 9px; font-weight: 800; color: #a080a0; }
+
+  .character-area {
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: 12px; padding: 8px 0 20px; position: relative; z-index: 1;
+    min-height: 130px;
+  }
+  .character {
+    width: 100px; height: 120px;
+    animation: bob 2.5s ease-in-out infinite;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+    position: relative;
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .cart {
+    width: 85px; height: 85px;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+    transition: transform 0.3s;
+  }
+  .cart.bump { animation: bump 0.4s; }
+  @keyframes bump {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15) rotate(-5deg); }
+  }
+  .speech-bubble {
+    position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    background: #fff; border: 3px solid #ffd6e8; border-radius: 16px;
+    padding: 6px 12px; font-size: 12px; font-weight: 800; color: #ff6b9d;
+    white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s; z-index: 10;
+  }
+  .speech-bubble::after {
+    content: ''; position: absolute; bottom: -10px; left: 50%;
+    transform: translateX(-50%); border: 7px solid transparent;
+    border-top-color: #ffd6e8;
+  }
+  .speech-bubble.show { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+
+  .containers-title { text-align: center; font-size: 13px; color: #a080a0; margin-bottom: 8px; font-weight: 800; }
+  .containers { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 14px; }
+  .container {
+    background: #fff; border: 3px dashed #b8e6ff; border-radius: 16px;
+    padding: 8px 4px 6px; text-align: center; font-size: 10px; font-weight: 800;
+    color: #5a9ac0; min-height: 86px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; transition: all 0.2s;
+    box-shadow: 0 3px 0 #b8e6ff; position: relative;
+  }
+  .container .icon { width: 44px; height: 44px; margin-bottom: 2px; }
+  .container .icon svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1)); }
+  .container.drop-hover {
+    background: #e0f7ff; border-style: solid; border-color: #6bc7ff;
+    transform: scale(1.08) translateY(-2px); box-shadow: 0 6px 0 #6bc7ff;
+  }
+  .container.correct {
+    background: #b8f0d0; border-color: #6bd39c; color: #2a7a4a;
+    box-shadow: 0 3px 0 #6bd39c; animation: pop 0.4s;
+  }
+  @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  .container.wrong {
+    background: #ffd6d6; border-color: #ff8080; color: #c04040;
+    box-shadow: 0 3px 0 #ff8080; animation: shake 0.4s;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  .message {
+    text-align: center; padding: 10px; border-radius: 14px; margin-bottom: 12px;
+    font-weight: 800; font-size: 14px; min-height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s;
+  }
+  .message.ok { background: #d0f5e0; color: #2a7a4a; border: 2px solid #6bd39c; }
+  .message.err { background: #ffe0e0; color: #c04040; border: 2px solid #ff8080; }
+  .message:empty { background: transparent; border: none; }
+
+  .btn {
+    display: block; margin: 0 auto;
+    background: linear-gradient(180deg, #ff8db5 0%, #ff6b9d 100%);
+    color: #fff; border: none; padding: 12px 30px; border-radius: 25px;
+    font-size: 15px; font-weight: 800; font-family: inherit; cursor: pointer;
+    box-shadow: 0 4px 0 #d94a7a; transition: all 0.15s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #d94a7a; }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #d94a7a; }
+
+  .win-screen {
+    display: none; text-align: center; padding: 30px 20px; background: #fff;
+    border-radius: 24px; border: 4px solid #ffd6e8; box-shadow: 0 6px 0 #ffd6e8;
+  }
+  .win-screen.active { display: block; }
+  .win-screen h2 { color: #ff6b9d; font-size: 28px; margin-bottom: 12px; }
+  .win-screen .big-pic { width: 140px; height: 140px; margin: 0 auto 12px; display: block; }
+  .win-screen p { font-size: 15px; color: #a080a0; margin-bottom: 18px; }
+
+  .hint {
+    text-align: center; font-size: 12px; color: #a080a0;
+    margin-bottom: 10px; font-weight: 700;
+  }
+
+  @media (max-width: 500px) {
+    .header h1 { font-size: 20px; }
+    .character { width: 75px; height: 90px; }
+    .cart { width: 65px; height: 65px; }
+    .item .pic { width: 42px; height: 42px; }
+    .item .name { font-size: 8px; }
+    .shelves { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); padding: 8px; }
+    .containers { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+    .container .icon { width: 36px; height: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-wrap">
+  <div class="header">
+    <h1>🌍 Container Shopping — World Tour</h1>
+    <p>Помоги Миле собрать покупки в разных магазинах мира!</p>
+  </div>
+
+  <div class="location-badge">
+    <span class="loc-icon" id="locIcon"></span>
+    <span id="locName">Loading...</span>
+  </div>
+
+  <div class="difficulty">
+    <button class="diff-btn active" data-diff="easy">🌸 Easy</button>
+    <button class="diff-btn" data-diff="medium">🌼 Medium</button>
+    <button class="diff-btn" data-diff="hard">🌺 Hard</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">⭐ Score<span id="score">0</span></div>
+    <div class="stat">📦 Items<span id="progress">0/0</span></div>
+    <div class="stat">❌ Mistakes<span id="mistakes">0</span></div>
+    <div class="stat" id="timerBox">⏱ Time<span id="timer">--</span></div>
+  </div>
+
+  <div class="list-card">
+    <h3>📋 Shopping List</h3>
+    <ul id="list"></ul>
+  </div>
+
+  <div class="shop-scene" id="shopScene">
+    <div class="loc-bg" id="locBg"></div>
+    <div class="scene-content">
+      <div class="shelves" id="shelf"></div>
+      <div class="character-area">
+        <div style="position:relative;">
+          <div class="speech-bubble" id="speech"></div>
+          <div class="character" id="character"></div>
+        </div>
+        <div class="cart" id="cart"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">👇 Перетащи товар с полки в правильный контейнер</p>
+
+  <div class="containers-title">📦 Pick the right container:</div>
+  <div class="containers" id="containers"></div>
+
+  <div class="message" id="message"></div>
+
+  <div class="win-screen" id="winScreen">
+    <div class="big-pic" id="winPic"></div>
+    <h2>Well done!</h2>
+    <p id="finalMsg"></p>
+    <button class="btn" onclick="startGame()">🎮 Play Again</button>
+  </div>
+
+  <button class="btn" id="restartBtn" onclick="startGame()">🔄 New Game</button>
+</div>
+
+<script>
+// ============================================================
+//  ФОТО-ФОНЫ ЛОКАЦИЙ (Unsplash — бесплатные фото интерьеров)
+//  Чтобы сделать офлайн — скачайте фото в images/backgrounds/
+//  и замените URL на 'images/backgrounds/farm.jpg' и т.п.
+// ============================================================
+const LOCATION_BG = {
+  farm: 'https://images.unsplash.com/photo-1601598851547-4302969d0614?w=1600&q=80',
+  // ^ фермерский магазин / амбар
+  bakery: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=1600&q=80',
+  // ^ пекарня, витрина с хлебом
+  market: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=1600&q=80',
+  // ^ овощной рынок
+  sweetshop: 'https://images.unsplash.com/photo-1582058091505-f87a2e55a40f?w=1600&q=80',
+  // ^ кондитерская / витрина со сладостями
+  supermarket: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=1600&q=80'
+  // ^ супермаркет, проход с полками
+};
+
+const LOCATION_ICONS = {
+  farm: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M3 20 L3 12 L12 6 L21 12 L21 20 Z" fill="#c04040" stroke="#802020" stroke-width="1.5"/><rect x="9" y="14" width="6" height="6" fill="#fff8e0" stroke="#802020" stroke-width="1"/></svg>`,
+  bakery: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M4 12 Q4 8 8 7 Q12 5 16 7 Q20 8 20 12 L20 18 Q20 20 18 20 L6 20 Q4 20 4 18 Z" fill="#e8b870" stroke="#a07030" stroke-width="1.5"/><path d="M7 10 Q10 9 13 10 Q16 9 18 10" stroke="#a07030" stroke-width="1" fill="none"/></svg>`,
+  market: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M3 8 L21 8 L18 14 L6 14 Z" fill="#a0e878" stroke="#60a040" stroke-width="1.5"/><rect x="4" y="16" width="16" height="4" fill="#c89860" stroke="#806040" stroke-width="1"/></svg>`,
+  sweetshop: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M6 20 L6 12 Q6 8 12 8 Q18 8 18 12 L18 20 Z" fill="#ff6b9d" stroke="#c04070" stroke-width="1.5"/><circle cx="12" cy="6" r="2" fill="#ffd166"/></svg>`,
+  supermarket: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M3 6 L21 6 L19 18 L5 18 Z" fill="#6bc7ff" stroke="#4080c0" stroke-width="1.5"/><path d="M6 9 L18 9 M7 12 L17 12" stroke="#fff" stroke-width="1"/></svg>`
+};
+
+// ============================================================
+//  ЛОКАЦИИ
+// ============================================================
+const LOCATIONS = {
+  farm:        { name: 'Milk Farm',    icon: 'farm',        items: ['milk','cream','eggs12','cheese','butter','yogurt','juice'] },
+  bakery:      { name: 'Bakery',       icon: 'bakery',      items: ['bread','biscuits','cake','pizza','pasta','flour','chocolate'] },
+  market:      { name: 'Green Market', icon: 'market',      items: ['grapes','bananas','carrots','apples','potatoes','fruit','jam','honey'] },
+  sweetshop:   { name: 'Sweet Shop',   icon: 'sweetshop',   items: ['chocolate','chocolates','candy','cake','honey','jam','icecream'] },
+  supermarket: { name: 'Supermarket',  icon: 'supermarket', items: ['water','soda','cola','beer','wine','shampoo','soap','soup','beans','tuna','rice','sugar','crisps','chips','ketchup','oil'] }
+};
+const LOCATION_ORDER = ['farm','bakery','market','sweetshop','supermarket'];
+
+// ============================================================
+//  УЛУЧШЕННЫЕ SVG ТОВАРОВ (с градиентами, бликами, тенями)
+// ============================================================
+const svg = (content, vb = "0 0 60 60") =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="100%" height="100%">${content}</svg>`;
+
+// Универсальная тень на полке (для каждого товара)
+const SHADOW = `<ellipse cx="30" cy="56" rx="14" ry="2.5" fill="#000" opacity="0.12"/>`;
+
+const ITEM_SVG = {
+
+  milk: svg(`
+    <defs>
+      <linearGradient id="milkBody" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#d8eaf2"/>
+        <stop offset="45%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#b8ccd8"/>
+      </linearGradient>
+      <linearGradient id="milkTop" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f0f8fc"/>
+        <stop offset="100%" stop-color="#c8dce8"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M20 18 L40 18 L40 52 Q40 55 37 55 L23 55 Q20 55 20 52 Z" fill="url(#milkBody)" stroke="#9ab4c4" stroke-width="1.5"/>
+    <path d="M20 18 L24 12 L36 12 L40 18" fill="url(#milkTop)" stroke="#9ab4c4" stroke-width="1.5"/>
+    <rect x="22" y="24" width="16" height="22" rx="2" fill="#a8d8f0" stroke="#78b0d0" stroke-width="1"/>
+    <ellipse cx="24" cy="34" rx="1.5" ry="8" fill="#fff" opacity="0.7"/>
+    <circle cx="30" cy="33" r="3" fill="#fff" opacity="0.9"/>
+    <path d="M27 38 Q30 41 33 38" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  `),
+
+  juice: svg(`
+    <defs>
+      <linearGradient id="juiceBody" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#ffe0e0"/>
+        <stop offset="45%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#f0c8c8"/>
+      </linearGradient>
+      <linearGradient id="juiceFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffc890"/>
+        <stop offset="100%" stop-color="#ff9858"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M20 18 L40 18 L40 52 Q40 55 37 55 L23 55 Q20 55 20 52 Z" fill="url(#juiceBody)" stroke="#c8a0a0" stroke-width="1.5"/>
+    <path d="M20 18 L24 12 L36 12 L40 18" fill="#ffe8e8" stroke="#c8a0a0" stroke-width="1.5"/>
+    <rect x="22" y="26" width="16" height="20" rx="2" fill="url(#juiceFill)"/>
+    <circle cx="30" cy="34" r="4" fill="#ff7838"/>
+    <ellipse cx="24" cy="34" rx="1.5" ry="6" fill="#fff" opacity="0.5"/>
+    <text x="30" y="42" text-anchor="middle" font-size="5" font-weight="bold" fill="#fff">JUICE</text>
+  `),
+
+  cream: svg(`
+    <defs>
+      <linearGradient id="creamBody" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#f8ecd8"/>
+        <stop offset="50%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#e0d0b8"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M20 22 L40 22 L40 52 Q40 55 37 55 L23 55 Q20 55 20 52 Z" fill="url(#creamBody)" stroke="#c0a888" stroke-width="1.5"/>
+    <ellipse cx="30" cy="22" rx="10" ry="3.5" fill="#fff" stroke="#c0a888" stroke-width="1"/>
+    <path d="M30 10 Q25 14 30 18 Q35 14 30 10" fill="#ffe4a0" stroke="#e0c060" stroke-width="1"/>
+    <ellipse cx="24" cy="38" rx="1.5" ry="8" fill="#fff" opacity="0.6"/>
+    <circle cx="30" cy="38" r="5" fill="#f0d8a8"/>
+  `),
+
+  eggs12: svg(`
+    <defs>
+      <linearGradient id="eggBox" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e8c8a0"/>
+        <stop offset="100%" stop-color="#c8a878"/>
+      </linearGradient>
+      <radialGradient id="eggGrad" cx="40%" cy="35%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#f0e0c8"/>
+      </radialGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="14" y="20" width="32" height="30" rx="4" fill="url(#eggBox)" stroke="#a08060" stroke-width="1.5"/>
+    <rect x="14" y="28" width="32" height="3" fill="#a08060" opacity="0.4"/>
+    <ellipse cx="22" cy="28" rx="5" ry="4" fill="url(#eggGrad)" stroke="#d0b898" stroke-width="0.8"/>
+    <ellipse cx="30" cy="28" rx="5" ry="4" fill="url(#eggGrad)" stroke="#d0b898" stroke-width="0.8"/>
+    <ellipse cx="38" cy="28" rx="5" ry="4" fill="url(#eggGrad)" stroke="#d0b898" stroke-width="0.8"/>
+    <ellipse cx="22" cy="40" rx="5" ry="4" fill="url(#eggGrad)" stroke="#d0b898" stroke-width="0.8"/>
+    <ellipse cx="30" cy="40" rx="5" ry="4" fill="url(#eggGrad)" stroke="#d0b898" stroke-width="0.8"/>
+    <ellipse cx="38" cy="40" rx="5" ry="4" fill="url(#eggGrad)" stroke="#d0b898" stroke-width="0.8"/>
+    <text x="30" y="24" text-anchor="middle" font-size="5" font-weight="bold" fill="#806040">12 EGGS</text>
+  `),
+
+  water: svg(`
+    <defs>
+      <linearGradient id="waterGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#a8d8f0"/>
+        <stop offset="40%" stop-color="#e0f4ff"/>
+        <stop offset="100%" stop-color="#80b8e0"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M24 12 L36 12 L38 20 L38 52 Q38 55 35 55 L25 55 Q22 55 22 52 L22 20 Z" fill="url(#waterGrad)" stroke="#6098c0" stroke-width="1.5"/>
+    <rect x="24" y="14" width="12" height="4" rx="1" fill="#6098c0"/>
+    <rect x="23" y="28" width="14" height="18" rx="1" fill="#5ab0e0" opacity="0.6"/>
+    <ellipse cx="26" cy="36" rx="1.5" ry="10" fill="#fff" opacity="0.7"/>
+    <circle cx="30" cy="40" r="2.5" fill="#fff" opacity="0.5"/>
+    <circle cx="32" cy="46" r="1.5" fill="#fff" opacity="0.5"/>
+  `),
+
+  oil: svg(`
+    <defs>
+      <linearGradient id="oilGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#a8c878"/>
+        <stop offset="45%" stop-color="#e0f0c0"/>
+        <stop offset="100%" stop-color="#88a858"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M26 16 L34 16 L34 22 L38 26 L38 52 Q38 55 35 55 L25 55 Q22 55 22 52 L22 26 L26 22 Z" fill="url(#oilGrad)" stroke="#608040" stroke-width="1.5"/>
+    <rect x="27" y="12" width="6" height="6" rx="1" fill="#608040"/>
+    <rect x="24" y="30" width="12" height="14" rx="1" fill="#fff8e0" opacity="0.9"/>
+    <ellipse cx="30" cy="37" rx="3" ry="5" fill="#88a848"/>
+    <path d="M28 34 Q30 32 32 34 Q32 40 30 42 Q28 40 28 34" fill="#608020"/>
+    <ellipse cx="26" cy="40" rx="1" ry="6" fill="#fff" opacity="0.5"/>
+  `),
+
+  ketchup: svg(`
+    <defs>
+      <linearGradient id="ketchupGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#d04020"/>
+        <stop offset="45%" stop-color="#ff6040"/>
+        <stop offset="100%" stop-color="#a03018"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M24 14 L36 14 L36 20 L38 24 L38 52 Q38 55 35 55 L25 55 Q22 55 22 52 L22 24 L24 20 Z" fill="url(#ketchupGrad)" stroke="#802010" stroke-width="1.5"/>
+    <rect x="25" y="10" width="10" height="5" rx="1" fill="#802010"/>
+    <rect x="24" y="30" width="12" height="16" rx="1" fill="#fff8e8"/>
+    <text x="30" y="38" text-anchor="middle" font-size="6" font-weight="bold" fill="#d04020">KETCH</text>
+    <path d="M27 42 L30 44 L33 42" stroke="#d04020" stroke-width="1" fill="none"/>
+    <ellipse cx="26" cy="36" rx="1" ry="8" fill="#fff" opacity="0.4"/>
+  `),
+
+  wine: svg(`
+    <defs>
+      <linearGradient id="wineGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#701828"/>
+        <stop offset="45%" stop-color="#c04060"/>
+        <stop offset="100%" stop-color="#601020"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M26 10 L34 10 L34 20 Q38 24 38 38 Q38 48 30 50 Q22 48 22 38 Q22 24 26 20 Z" fill="url(#wineGrad)" stroke="#401018" stroke-width="1.5"/>
+    <rect x="27" y="8" width="6" height="3" fill="#401018"/>
+    <rect x="28" y="48" width="4" height="6" fill="#401018"/>
+    <ellipse cx="30" cy="28" rx="5" ry="6" fill="#fff" opacity="0.9"/>
+    <text x="30" y="30" text-anchor="middle" font-size="4" font-weight="bold" fill="#701828">WINE</text>
+    <ellipse cx="25" cy="34" rx="1" ry="6" fill="#fff" opacity="0.3"/>
+  `),
+
+  soda: svg(`
+    <defs>
+      <linearGradient id="sodaGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#c04070"/>
+        <stop offset="45%" stop-color="#ff88b0"/>
+        <stop offset="100%" stop-color="#a03060"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M24 12 L36 12 L36 20 L38 26 L38 52 Q38 55 35 55 L25 55 Q22 55 22 52 L22 26 L24 20 Z" fill="url(#sodaGrad)" stroke="#802040" stroke-width="1.5"/>
+    <rect x="25" y="10" width="10" height="4" rx="1" fill="#802040"/>
+    <rect x="24" y="30" width="12" height="14" rx="1" fill="#fff" opacity="0.9"/>
+    <text x="30" y="39" text-anchor="middle" font-size="7" font-weight="bold" fill="#ff3d7a">POP</text>
+    <ellipse cx="26" cy="38" rx="1" ry="8" fill="#fff" opacity="0.4"/>
+  `),
+
+  shampoo: svg(`
+    <defs>
+      <linearGradient id="shampooGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#88c0e0"/>
+        <stop offset="45%" stop-color="#d0ecff"/>
+        <stop offset="100%" stop-color="#6090b0"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M24 16 L36 16 L38 20 L38 52 Q38 55 35 55 L25 55 Q22 55 22 52 L22 20 Z" fill="url(#shampooGrad)" stroke="#406880" stroke-width="1.5"/>
+    <rect x="26" y="10" width="8" height="8" rx="2" fill="#406880"/>
+    <rect x="23" y="28" width="14" height="16" rx="1" fill="#fff" opacity="0.9"/>
+    <ellipse cx="30" cy="36" rx="4" ry="3" fill="#6090b0"/>
+    <path d="M28 34 Q30 32 32 34" stroke="#406880" stroke-width="1" fill="none"/>
+    <ellipse cx="26" cy="38" rx="1" ry="6" fill="#fff" opacity="0.5"/>
+  `),
+
+  jam: svg(`
+    <defs>
+      <linearGradient id="jamGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#c03050"/>
+        <stop offset="45%" stop-color="#ff6080"/>
+        <stop offset="100%" stop-color="#901830"/>
+      </linearGradient>
+      <linearGradient id="jamLid" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f0d0a0"/>
+        <stop offset="100%" stop-color="#c0a070"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="20" y="22" width="20" height="32" rx="4" fill="url(#jamGrad)" stroke="#701020" stroke-width="1.5"/>
+    <ellipse cx="30" cy="22" rx="10" ry="3" fill="url(#jamLid)" stroke="#806040" stroke-width="1"/>
+    <rect x="20" y="30" width="20" height="14" fill="#fff8e8"/>
+    <circle cx="26" cy="34" r="2" fill="#ff3355"/>
+    <circle cx="34" cy="36" r="2" fill="#ff3355"/>
+    <circle cx="30" cy="40" r="1.5" fill="#ff3355"/>
+    <ellipse cx="23" cy="38" rx="1" ry="6" fill="#fff" opacity="0.4"/>
+  `),
+
+  honey: svg(`
+    <defs>
+      <linearGradient id="honeyGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#c08020"/>
+        <stop offset="45%" stop-color="#ffc850"/>
+        <stop offset="100%" stop-color="#a06010"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="20" y="22" width="20" height="32" rx="4" fill="url(#honeyGrad)" stroke="#806020" stroke-width="1.5"/>
+    <ellipse cx="30" cy="22" rx="10" ry="3" fill="#d8a050" stroke="#806040" stroke-width="1"/>
+    <path d="M24 34 Q30 30 36 34 Q36 44 30 46 Q24 44 24 34" fill="#ffd060" stroke="#c09020" stroke-width="0.8"/>
+    <circle cx="30" cy="38" r="2" fill="#a06010"/>
+    <ellipse cx="23" cy="38" rx="1" ry="6" fill="#fff" opacity="0.4"/>
+  `),
+
+  coffee: svg(`
+    <defs>
+      <linearGradient id="coffeeGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#3a2010"/>
+        <stop offset="45%" stop-color="#6b4028"/>
+        <stop offset="100%" stop-color="#2a1008"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="20" y="22" width="20" height="32" rx="4" fill="url(#coffeeGrad)" stroke="#1a0804" stroke-width="1.5"/>
+    <ellipse cx="30" cy="22" rx="10" ry="3" fill="#d0b090" stroke="#806040" stroke-width="1"/>
+    <rect x="20" y="30" width="20" height="14" fill="#fff8e8"/>
+    <circle cx="30" cy="36" r="4" fill="#4a2818"/>
+    <path d="M30 22 L30 26 M27 24 L33 24" stroke="#fff" stroke-width="1"/>
+    <text x="30" y="42" text-anchor="middle" font-size="4" font-weight="bold" fill="#701818">COFFEE</text>
+  `),
+
+  pickles: svg(`
+    <defs>
+      <linearGradient id="picklesGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#88b040"/>
+        <stop offset="45%" stop-color="#c8e890"/>
+        <stop offset="100%" stop-color="#608020"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="20" y="22" width="20" height="32" rx="4" fill="url(#picklesGrad)" stroke="#406010" stroke-width="1.5"/>
+    <ellipse cx="30" cy="22" rx="10" ry="3" fill="#d8c0a0" stroke="#806040" stroke-width="1"/>
+    <rect x="20" y="30" width="20" height="14" fill="#fff8e8" opacity="0.85"/>
+    <rect x="23" y="32" width="14" height="9" rx="3" fill="#80c040"/>
+    <ellipse cx="28" cy="36" rx="1" ry="2" fill="#fff" opacity="0.5"/>
+  `),
+
+  olives: svg(`
+    <defs>
+      <linearGradient id="olivesGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#a0b880"/>
+        <stop offset="45%" stop-color="#d8e8b8"/>
+        <stop offset="100%" stop-color="#709050"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="20" y="22" width="20" height="32" rx="4" fill="url(#olivesGrad)" stroke="#507030" stroke-width="1.5"/>
+    <ellipse cx="30" cy="22" rx="10" ry="3" fill="#d8c0a0" stroke="#806040" stroke-width="1"/>
+    <rect x="20" y="30" width="20" height="14" fill="#fff8e8" opacity="0.85"/>
+    <ellipse cx="26" cy="35" rx="2.5" ry="3" fill="#405020"/>
+    <ellipse cx="33" cy="37" rx="2.5" ry="3" fill="#405020"/>
+    <ellipse cx="29" cy="40" rx="2.5" ry="3" fill="#405020"/>
+  `),
+
+  cereal: svg(`
+    <defs>
+      <linearGradient id="cerealGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffc850"/>
+        <stop offset="100%" stop-color="#e09020"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M18 18 L42 18 L42 52 L18 52 Z" fill="url(#cerealGrad)" stroke="#a06010" stroke-width="1.5"/>
+    <path d="M18 18 L30 14 L42 18" fill="#f0b030" stroke="#a06010" stroke-width="1.5"/>
+    <rect x="22" y="24" width="16" height="20" fill="#fff8e8"/>
+    <text x="30" y="34" text-anchor="middle" font-size="6" font-weight="bold" fill="#c08020">OATS</text>
+    <circle cx="27" cy="40" r="1.5" fill="#c08020"/>
+    <circle cx="33" cy="41" r="1.5" fill="#c08020"/>
+    <ellipse cx="21" cy="38" rx="1" ry="6" fill="#fff" opacity="0.4"/>
+  `),
+
+  tea: svg(`
+    <defs>
+      <linearGradient id="teaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#88b060"/>
+        <stop offset="100%" stop-color="#507030"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M18 22 L42 22 L42 46 L18 46 Z" fill="url(#teaGrad)" stroke="#305010" stroke-width="1.5"/>
+    <path d="M18 22 L30 18 L42 22" fill="#689040" stroke="#305010" stroke-width="1.5"/>
+    <rect x="22" y="28" width="16" height="14" fill="#fff8e8"/>
+    <ellipse cx="30" cy="34" rx="4" ry="3" fill="#507040"/>
+    <path d="M28 36 L30 42" stroke="#507040" stroke-width="1"/>
+    <text x="30" y="40" text-anchor="middle" font-size="4" font-weight="bold" fill="#305010">TEA</text>
+  `),
+
+  chocolates: svg(`
+    <defs>
+      <linearGradient id="chocBoxGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#d05090"/>
+        <stop offset="100%" stop-color="#902050"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="16" y="22" width="28" height="26" rx="3" fill="url(#chocBoxGrad)" stroke="#601040" stroke-width="1.5"/>
+    <path d="M16 22 L30 18 L44 22" fill="#a03060" stroke="#601040" stroke-width="1.5"/>
+    <rect x="20" y="30" width="20" height="12" rx="2" fill="#fff8e8"/>
+    <circle cx="26" cy="36" r="2.5" fill="#5a3020"/>
+    <circle cx="34" cy="36" r="2.5" fill="#5a3020"/>
+    <path d="M30 22 Q31 20 32 22" stroke="#ffd166" stroke-width="1.5" fill="none"/>
+  `),
+
+  pizza: svg(`
+    <defs>
+      <linearGradient id="pizzaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e8c898"/>
+        <stop offset="100%" stop-color="#b89068"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="14" y="18" width="32" height="32" rx="3" fill="url(#pizzaGrad)" stroke="#806040" stroke-width="1.5"/>
+    <path d="M14 18 L30 14 L46 18" fill="#a07858" stroke="#806040" stroke-width="1.5"/>
+    <rect x="18" y="24" width="24" height="22" fill="#ffd060"/>
+    <circle cx="24" cy="32" r="3" fill="#e04040"/>
+    <circle cx="34" cy="36" r="3" fill="#e04040"/>
+    <circle cx="28" cy="40" r="2" fill="#60a040"/>
+    <circle cx="36" cy="30" r="1.5" fill="#60a040"/>
+    <text x="30" y="20" text-anchor="middle" font-size="3.5" font-weight="bold" fill="#fff">PIZZA</text>
+  `),
+
+  chips: svg(`
+    <defs>
+      <linearGradient id="chipsGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#d0a020"/>
+        <stop offset="45%" stop-color="#ffd860"/>
+        <stop offset="100%" stop-color="#a08010"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M20 20 Q18 22 18 30 L18 50 Q18 54 22 54 L38 54 Q42 54 42 50 L42 30 Q42 22 40 20 Z" fill="url(#chipsGrad)" stroke="#806010" stroke-width="1.5"/>
+    <path d="M20 20 Q30 16 40 20" fill="#e0b040" stroke="#806010" stroke-width="1.5"/>
+    <ellipse cx="30" cy="38" rx="8" ry="5" fill="#fff8e8"/>
+    <text x="30" y="40" text-anchor="middle" font-size="5" font-weight="bold" fill="#a08010">CHIPS</text>
+    <ellipse cx="22" cy="36" rx="1" ry="6" fill="#fff" opacity="0.4"/>
+  `),
+
+  pasta: svg(`
+    <defs>
+      <linearGradient id="pastaGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#d0a860"/>
+        <stop offset="45%" stop-color="#f8e0a8"/>
+        <stop offset="100%" stop-color="#a08040"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M20 22 Q18 24 18 32 L18 50 Q18 54 22 54 L38 54 Q42 54 42 50 L42 32 Q42 24 40 22 Z" fill="url(#pastaGrad)" stroke="#806020" stroke-width="1.5"/>
+    <path d="M20 22 Q30 18 40 22" fill="#e8c880" stroke="#806020" stroke-width="1.5"/>
+    <rect x="22" y="32" width="16" height="14" fill="#fff8e8"/>
+    <path d="M25 40 Q30 36 35 40" stroke="#c0a060" stroke-width="1.5" fill="none"/>
+    <path d="M25 44 Q30 40 35 44" stroke="#c0a060" stroke-width="1.5" fill="none"/>
+  `),
+
+  butter: svg(`
+    <defs>
+      <linearGradient id="butterGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fff8c0"/>
+        <stop offset="100%" stop-color="#e8d060"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="16" y="26" width="28" height="20" rx="2" fill="url(#butterGrad)" stroke="#b0a040" stroke-width="1.5"/>
+    <path d="M16 26 L30 22 L44 26" fill="#f0e090" stroke="#b0a040" stroke-width="1.5"/>
+    <rect x="20" y="32" width="20" height="8" fill="#fffbe0"/>
+    <ellipse cx="22" cy="34" rx="3" ry="1" fill="#fff" opacity="0.7"/>
+  `),
+
+  biscuits: svg(`
+    <defs>
+      <linearGradient id="biscGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#c8a060"/>
+        <stop offset="45%" stop-color="#f0d098"/>
+        <stop offset="100%" stop-color="#a08040"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M20 22 Q18 24 18 32 L18 50 Q18 54 22 54 L38 54 Q42 54 42 50 L42 32 Q42 24 40 22 Z" fill="url(#biscGrad)" stroke="#806020" stroke-width="1.5"/>
+    <path d="M20 22 Q30 18 40 22" fill="#e0c080" stroke="#806020" stroke-width="1.5"/>
+    <rect x="22" y="30" width="16" height="18" fill="#fff8e8"/>
+    <circle cx="26" cy="36" r="2" fill="#a06020"/>
+    <circle cx="34" cy="36" r="2" fill="#a06020"/>
+    <circle cx="30" cy="42" r="2" fill="#a06020"/>
+  `),
+
+  crisps: svg(`
+    <defs>
+      <linearGradient id="crispsGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#4080c0"/>
+        <stop offset="45%" stop-color="#88c8ff"/>
+        <stop offset="100%" stop-color="#2060a0"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M20 20 Q18 22 18 30 L18 50 Q18 54 22 54 L38 54 Q42 54 42 50 L42 30 Q42 22 40 20 Z" fill="url(#crispsGrad)" stroke="#104080" stroke-width="1.5"/>
+    <path d="M20 20 Q30 16 40 20" fill="#68a8e0" stroke="#104080" stroke-width="1.5"/>
+    <ellipse cx="30" cy="38" rx="8" ry="5" fill="#fff8e8"/>
+    <text x="30" y="40" text-anchor="middle" font-size="4.5" font-weight="bold" fill="#2060a0">CRISPS</text>
+    <ellipse cx="22" cy="36" rx="1" ry="6" fill="#fff" opacity="0.4"/>
+  `),
+
+  soup: svg(`
+    <defs>
+      <linearGradient id="soupGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#909090"/>
+        <stop offset="45%" stop-color="#e0e0e0"/>
+        <stop offset="100%" stop-color="#707070"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="16" y="22" width="28" height="30" rx="4" fill="url(#soupGrad)" stroke="#505050" stroke-width="1.5"/>
+    <rect x="16" y="26" width="28" height="3" fill="#a0a0a0"/>
+    <rect x="16" y="45" width="28" height="3" fill="#a0a0a0"/>
+    <rect x="20" y="30" width="20" height="12" fill="#fff8e8"/>
+    <text x="30" y="38" text-anchor="middle" font-size="5" font-weight="bold" fill="#c04020">SOUP</text>
+    <ellipse cx="19" cy="38" rx="1" ry="6" fill="#fff" opacity="0.4"/>
+  `),
+
+  beans: svg(`
+    <defs>
+      <linearGradient id="beansGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#a07040"/>
+        <stop offset="45%" stop-color="#e8b088"/>
+        <stop offset="100%" stop-color="#805030"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="16" y="22" width="28" height="30" rx="4" fill="url(#beansGrad)" stroke="#603820" stroke-width="1.5"/>
+    <rect x="16" y="26" width="28" height="3" fill="#c09070"/>
+    <rect x="16" y="45" width="28" height="3" fill="#c09070"/>
+    <rect x="20" y="30" width="20" height="12" fill="#fff8e8"/>
+    <ellipse cx="26" cy="36" rx="2" ry="1.5" fill="#8a5020"/>
+    <ellipse cx="32" cy="35" rx="2" ry="1.5" fill="#8a5020"/>
+    <ellipse cx="29" cy="39" rx="2" ry="1.5" fill="#8a5020"/>
+  `),
+
+  tuna: svg(`
+    <defs>
+      <linearGradient id="tunaGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#4070a0"/>
+        <stop offset="45%" stop-color="#a8d0f0"/>
+        <stop offset="100%" stop-color="#305080"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="16" y="22" width="28" height="30" rx="4" fill="url(#tunaGrad)" stroke="#204060" stroke-width="1.5"/>
+    <rect x="16" y="26" width="28" height="3" fill="#6898b8"/>
+    <rect x="16" y="45" width="28" height="3" fill="#6898b8"/>
+    <rect x="20" y="30" width="20" height="12" fill="#fff8e8"/>
+    <path d="M25 40 Q30 33 35 40 Q33 38 30 38 Q27 38 25 40" fill="#204060"/>
+    <circle cx="30" cy="33" r="1" fill="#204060"/>
+  `),
+
+  cola: svg(`
+    <defs>
+      <linearGradient id="colaGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#801818"/>
+        <stop offset="45%" stop-color="#e04040"/>
+        <stop offset="100%" stop-color="#601010"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M24 14 L36 14 L36 20 L38 24 L38 52 Q38 55 35 55 L25 55 Q22 55 22 52 L22 24 L24 20 Z" fill="url(#colaGrad)" stroke="#401010" stroke-width="1.5"/>
+    <rect x="25" y="12" width="10" height="4" fill="#c0c0c0" stroke="#808080" stroke-width="0.5"/>
+    <rect x="24" y="30" width="12" height="14" fill="#fff" opacity="0.9"/>
+    <text x="30" y="40" text-anchor="middle" font-size="6" font-weight="bold" fill="#c04040">COLA</text>
+    <ellipse cx="26" cy="38" rx="1" ry="8" fill="#fff" opacity="0.4"/>
+  `),
+
+  beer: svg(`
+    <defs>
+      <linearGradient id="beerGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#c08020"/>
+        <stop offset="45%" stop-color="#ffc850"/>
+        <stop offset="100%" stop-color="#a06010"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M24 14 L36 14 L36 20 L38 24 L38 52 Q38 55 35 55 L25 55 Q22 55 22 52 L22 24 L24 20 Z" fill="url(#beerGrad)" stroke="#806020" stroke-width="1.5"/>
+    <rect x="25" y="12" width="10" height="4" fill="#c0c0c0" stroke="#808080" stroke-width="0.5"/>
+    <rect x="24" y="30" width="12" height="14" fill="#fff8e8"/>
+    <text x="30" y="40" text-anchor="middle" font-size="5" font-weight="bold" fill="#c08020">BEER</text>
+    <ellipse cx="26" cy="38" rx="1" ry="8" fill="#fff" opacity="0.4"/>
+  `),
+
+  bread: svg(`
+    <defs>
+      <linearGradient id="breadGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f0c888"/>
+        <stop offset="100%" stop-color="#c89858"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M14 30 Q14 20 22 18 Q30 14 38 18 Q46 20 46 30 L46 46 Q46 50 42 50 L18 50 Q14 50 14 46 Z" fill="url(#breadGrad)" stroke="#806030" stroke-width="1.5"/>
+    <path d="M18 24 Q24 22 30 24 Q36 22 42 24" stroke="#806030" stroke-width="1.2" fill="none"/>
+    <path d="M18 30 Q24 28 30 30 Q36 28 42 30" stroke="#806030" stroke-width="1.2" fill="none"/>
+    <path d="M18 36 Q24 34 30 36 Q36 34 42 36" stroke="#806030" stroke-width="1.2" fill="none"/>
+    <ellipse cx="22" cy="28" rx="6" ry="2" fill="#fff" opacity="0.4"/>
+  `),
+
+  chocolate: svg(`
+    <defs>
+      <linearGradient id="chocGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#6a4030"/>
+        <stop offset="100%" stop-color="#3a2010"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="16" y="20" width="28" height="26" rx="2" fill="url(#chocGrad)" stroke="#2a1008" stroke-width="1.5"/>
+    <rect x="19" y="23" width="10" height="10" rx="0.5" fill="#7a5040"/>
+    <rect x="31" y="23" width="10" height="10" rx="0.5" fill="#7a5040"/>
+    <rect x="19" y="35" width="10" height="8" rx="0.5" fill="#7a5040"/>
+    <rect x="31" y="35" width="10" height="8" rx="0.5" fill="#7a5040"/>
+    <ellipse cx="20" cy="32" rx="1" ry="6" fill="#fff" opacity="0.3"/>
+  `),
+
+  soap: svg(`
+    <defs>
+      <linearGradient id="soapGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffd8e8"/>
+        <stop offset="100%" stop-color="#e8a0c0"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <rect x="14" y="26" width="32" height="18" rx="6" fill="url(#soapGrad)" stroke="#a06080" stroke-width="1.5"/>
+    <ellipse cx="30" cy="34" rx="10" ry="5" fill="#fff" opacity="0.5"/>
+    <circle cx="22" cy="30" r="1.5" fill="#fff" opacity="0.7"/>
+    <circle cx="38" cy="40" r="1.5" fill="#fff" opacity="0.7"/>
+    <path d="M26 35 Q30 33 34 35" stroke="#fff" stroke-width="1" fill="none"/>
+  `),
+
+  flour: svg(`
+    <defs>
+      <linearGradient id="flourGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#d0c0a0"/>
+        <stop offset="45%" stop-color="#f8f0e0"/>
+        <stop offset="100%" stop-color="#a89870"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M18 22 Q16 24 16 32 L16 50 Q16 54 20 54 L40 54 Q44 54 44 50 L44 32 Q44 24 42 22 Z" fill="url(#flourGrad)" stroke="#806840" stroke-width="1.5"/>
+    <path d="M18 22 Q30 16 42 22" fill="#e0d0a0" stroke="#806840" stroke-width="1.5"/>
+    <rect x="20" y="30" width="20" height="16" fill="#fff8e8"/>
+    <text x="30" y="40" text-anchor="middle" font-size="5" font-weight="bold" fill="#806840">FLOUR</text>
+    <ellipse cx="18" cy="38" rx="1" ry="6" fill="#fff" opacity="0.5"/>
+  `),
+
+  sugar: svg(`
+    <defs>
+      <linearGradient id="sugarGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#e8e0d0"/>
+        <stop offset="45%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#c8c0a8"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M18 22 Q16 24 16 32 L16 50 Q16 54 20 54 L40 54 Q44 54 44 50 L44 32 Q44 24 42 22 Z" fill="url(#sugarGrad)" stroke="#a09078" stroke-width="1.5"/>
+    <path d="M18 22 Q30 16 42 22" fill="#f0e8d0" stroke="#a09078" stroke-width="1.5"/>
+    <rect x="20" y="30" width="20" height="16" fill="#fff"/>
+    <text x="30" y="40" text-anchor="middle" font-size="5" font-weight="bold" fill="#a09078">SUGAR</text>
+    <ellipse cx="18" cy="38" rx="1" ry="6" fill="#fff" opacity="0.5"/>
+  `),
+
+  rice: svg(`
+    <defs>
+      <linearGradient id="riceGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#e0d8c0"/>
+        <stop offset="45%" stop-color="#f8f0e0"/>
+        <stop offset="100%" stop-color="#c0b898"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M18 22 Q16 24 16 32 L16 50 Q16 54 20 54 L40 54 Q44 54 44 50 L44 32 Q44 24 42 22 Z" fill="url(#riceGrad)" stroke="#a09070" stroke-width="1.5"/>
+    <path d="M18 22 Q30 16 42 22" fill="#e8e0c8" stroke="#a09070" stroke-width="1.5"/>
+    <rect x="20" y="30" width="20" height="16" fill="#fff"/>
+    <text x="30" y="40" text-anchor="middle" font-size="5" font-weight="bold" fill="#a09070">RICE</text>
+  `),
+
+  potatoes: svg(`
+    <defs>
+      <linearGradient id="potGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#a89060"/>
+        <stop offset="45%" stop-color="#d8c8a0"/>
+        <stop offset="100%" stop-color="#907840"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M18 22 Q16 24 16 32 L16 50 Q16 54 20 54 L40 54 Q44 54 44 50 L44 32 Q44 24 42 22 Z" fill="url(#potGrad)" stroke="#605030" stroke-width="1.5"/>
+    <path d="M18 22 Q30 16 42 22" fill="#c8b890" stroke="#605030" stroke-width="1.5"/>
+    <rect x="20" y="30" width="20" height="16" fill="#fff8e8" opacity="0.85"/>
+    <ellipse cx="26" cy="36" rx="4" ry="3" fill="#c8a870" stroke="#806040" stroke-width="0.5"/>
+    <ellipse cx="34" cy="39" rx="4" ry="3" fill="#c8a870" stroke="#806040" stroke-width="0.5"/>
+  `),
+
+  apples: svg(`
+    <defs>
+      <linearGradient id="appBagGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#c8a888"/>
+        <stop offset="45%" stop-color="#e8d0b8"/>
+        <stop offset="100%" stop-color="#a08060"/>
+      </linearGradient>
+      <radialGradient id="appleGrad" cx="35%" cy="35%">
+        <stop offset="0%" stop-color="#ff8080"/>
+        <stop offset="100%" stop-color="#c02020"/>
+      </radialGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M18 22 Q16 24 16 32 L16 50 Q16 54 20 54 L40 54 Q44 54 44 50 L44 32 Q44 24 42 22 Z" fill="url(#appBagGrad)" stroke="#806040" stroke-width="1.5"/>
+    <path d="M18 22 Q30 16 42 22" fill="#d8c0a8" stroke="#806040" stroke-width="1.5"/>
+    <rect x="20" y="30" width="20" height="16" fill="#fff8e8" opacity="0.85"/>
+    <circle cx="26" cy="36" r="4" fill="url(#appleGrad)"/>
+    <circle cx="34" cy="39" r="4" fill="url(#appleGrad)"/>
+    <path d="M26 32 L26 30" stroke="#60a040" stroke-width="1"/>
+    <path d="M34 35 L34 33" stroke="#60a040" stroke-width="1"/>
+  `),
+
+  grapes: svg(`
+    <defs>
+      <radialGradient id="grapeGrad" cx="35%" cy="35%">
+        <stop offset="0%" stop-color="#d080d0"/>
+        <stop offset="100%" stop-color="#701870"/>
+      </radialGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M30 12 L30 22" stroke="#604010" stroke-width="2"/>
+    <path d="M30 16 Q36 14 40 18" stroke="#60a040" stroke-width="2" fill="none"/>
+    <ellipse cx="30" cy="16" rx="4" ry="2" fill="#60a040" transform="rotate(-20 30 16)"/>
+    <circle cx="24" cy="26" r="4.5" fill="url(#grapeGrad)"/>
+    <circle cx="30" cy="26" r="4.5" fill="url(#grapeGrad)"/>
+    <circle cx="36" cy="26" r="4.5" fill="url(#grapeGrad)"/>
+    <circle cx="27" cy="34" r="4.5" fill="url(#grapeGrad)"/>
+    <circle cx="33" cy="34" r="4.5" fill="url(#grapeGrad)"/>
+    <circle cx="30" cy="42" r="4.5" fill="url(#grapeGrad)"/>
+    <circle cx="30" cy="50" r="4" fill="url(#grapeGrad)"/>
+    <circle cx="26" cy="24" r="1" fill="#fff" opacity="0.6"/>
+    <circle cx="32" cy="24" r="1" fill="#fff" opacity="0.6"/>
+  `),
+
+  bananas: svg(`
+    <defs>
+      <linearGradient id="bananaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffe86a"/>
+        <stop offset="100%" stop-color="#c0a020"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M14 20 Q18 40 34 46 Q44 48 48 42 Q40 44 34 40 Q22 34 20 18 Z" fill="url(#bananaGrad)" stroke="#806020" stroke-width="1.5"/>
+    <path d="M18 18 L22 20" stroke="#604010" stroke-width="2" stroke-linecap="round"/>
+    <path d="M44 42 L48 44" stroke="#604010" stroke-width="2" stroke-linecap="round"/>
+    <path d="M22 28 Q28 36 38 40" stroke="#c0a020" stroke-width="0.8" fill="none" opacity="0.5"/>
+  `),
+
+  carrots: svg(`
+    <defs>
+      <linearGradient id="carrotGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffa868"/>
+        <stop offset="100%" stop-color="#d06020"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M30 14 L30 26" stroke="#60a040" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M26 16 L30 24 M34 16 L30 24" stroke="#60a040" stroke-width="2" stroke-linecap="round"/>
+    <path d="M24 26 L30 54 L36 26 Q30 22 24 26" fill="url(#carrotGrad)" stroke="#803010" stroke-width="1.5"/>
+    <path d="M26 34 L30 34 M27 42 L31 42 M28 48 L30 48" stroke="#803010" stroke-width="1" stroke-linecap="round"/>
+    <ellipse cx="26" cy="32" rx="1" ry="6" fill="#fff" opacity="0.4"/>
+  `),
+
+  icecream: svg(`
+    <defs>
+      <linearGradient id="tubGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffd8e8"/>
+        <stop offset="100%" stop-color="#e88db5"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M18 22 L42 22 L42 44 Q42 50 36 50 L24 50 Q18 50 18 44 Z" fill="url(#tubGrad)" stroke="#a06080" stroke-width="1.5"/>
+    <ellipse cx="30" cy="22" rx="12" ry="4" fill="#fff" stroke="#a06080" stroke-width="1"/>
+    <circle cx="24" cy="32" r="3" fill="#ff8db5"/>
+    <circle cx="30" cy="35" r="3" fill="#88d8f8"/>
+    <circle cx="36" cy="32" r="3" fill="#ff8db5"/>
+    <circle cx="27" cy="42" r="2.5" fill="#fff"/>
+    <circle cx="33" cy="42" r="2.5" fill="#ffe0a0"/>
+    <path d="M28 20 L30 12 L32 20" fill="#ff8844" stroke="#c06020" stroke-width="1"/>
+    <ellipse cx="22" cy="38" rx="1" ry="6" fill="#fff" opacity="0.4"/>
+  `),
+
+  yogurt: svg(`
+    <defs>
+      <linearGradient id="yogGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fff8e8"/>
+        <stop offset="100%" stop-color="#e8d8c0"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M18 24 L42 24 L42 48 Q42 52 38 52 L22 52 Q18 52 18 48 Z" fill="url(#yogGrad)" stroke="#a09070" stroke-width="1.5"/>
+    <ellipse cx="30" cy="24" rx="12" ry="4" fill="#fff" stroke="#a09070" stroke-width="1"/>
+    <rect x="22" y="32" width="16" height="12" rx="2" fill="#ffb8d8"/>
+    <circle cx="30" cy="38" r="3" fill="#ff6b9d"/>
+    <ellipse cx="22" cy="38" rx="1" ry="5" fill="#fff" opacity="0.5"/>
+  `),
+
+  cheese: svg(`
+    <defs>
+      <linearGradient id="cheeseGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffe87a"/>
+        <stop offset="100%" stop-color="#c0a020"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M12 32 L30 22 L48 32 L48 44 L12 44 Z" fill="url(#cheeseGrad)" stroke="#806020" stroke-width="1.5"/>
+    <path d="M12 32 L30 22 L48 32" fill="#fff0a0" stroke="#806020" stroke-width="1.5"/>
+    <circle cx="22" cy="36" r="3" fill="#c0a020" opacity="0.7"/>
+    <circle cx="34" cy="38" r="3" fill="#c0a020" opacity="0.7"/>
+    <circle cx="42" cy="35" r="2" fill="#c0a020" opacity="0.7"/>
+  `),
+
+  ham: svg(`
+    <defs>
+      <linearGradient id="hamGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffd8d8"/>
+        <stop offset="100%" stop-color="#e89090"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M14 30 Q14 22 22 20 L38 20 Q46 22 46 30 L46 40 Q46 46 40 46 L20 46 Q14 46 14 40 Z" fill="url(#hamGrad)" stroke="#a06060" stroke-width="1.5"/>
+    <ellipse cx="30" cy="32" rx="12" ry="8" fill="#ffe8e8" stroke="#c08080" stroke-width="1"/>
+    <path d="M20 32 Q30 28 40 32" stroke="#e07070" stroke-width="1.2" fill="none"/>
+    <path d="M20 36 Q30 32 40 36" stroke="#e07070" stroke-width="1.2" fill="none"/>
+  `),
+
+  fruit: svg(`
+    <defs>
+      <radialGradient id="fruitGrad" cx="35%" cy="35%">
+        <stop offset="0%" stop-color="#ff8080"/>
+        <stop offset="100%" stop-color="#c02020"/>
+      </radialGradient>
+    </defs>
+    ${SHADOW}
+    <circle cx="30" cy="34" r="16" fill="url(#fruitGrad)" stroke="#801010" stroke-width="1.5"/>
+    <path d="M30 18 Q26 10 22 12 Q26 16 30 18" fill="#60a040" stroke="#306020" stroke-width="1"/>
+    <ellipse cx="24" cy="28" rx="3" ry="2" fill="#fff" opacity="0.6"/>
+    <ellipse cx="36" cy="38" rx="2" ry="1.5" fill="#fff" opacity="0.4"/>
+  `),
+
+  cake: svg(`
+    <defs>
+      <linearGradient id="cakeGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fff0f8"/>
+        <stop offset="100%" stop-color="#ffb8d8"/>
+      </linearGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M12 30 L30 22 L48 30 L48 44 L12 44 Z" fill="url(#cakeGrad)" stroke="#a06080" stroke-width="1.5"/>
+    <path d="M12 30 L30 22 L48 30" fill="#fff8fc" stroke="#a06080" stroke-width="1.5"/>
+    <path d="M16 26 Q30 22 44 26" stroke="#ff6b9d" stroke-width="1.5" fill="none"/>
+    <circle cx="22" cy="38" r="2" fill="#ff3355"/>
+    <circle cx="38" cy="38" r="2" fill="#ff3355"/>
+    <circle cx="30" cy="40" r="1.5" fill="#ffd166"/>
+  `),
+
+  candy: svg(`
+    <defs>
+      <radialGradient id="candyGrad" cx="35%" cy="35%">
+        <stop offset="0%" stop-color="#ffb8d8"/>
+        <stop offset="100%" stop-color="#c04070"/>
+      </radialGradient>
+    </defs>
+    ${SHADOW}
+    <path d="M20 30 L10 24 L10 36 Z" fill="#ff8db5" stroke="#c04070" stroke-width="1.5"/>
+    <path d="M40 30 L50 24 L50 36 Z" fill="#ff8db5" stroke="#c04070" stroke-width="1.5"/>
+    <circle cx="30" cy="30" r="10" fill="url(#candyGrad)" stroke="#c04070" stroke-width="1.5"/>
+    <path d="M24 30 Q30 24 36 30 Q30 36 24 30" fill="#fff" opacity="0.5"/>
+  `)
+};
+
+// ============================================================
+//  КОНТЕЙНЕРЫ (улучшенные)
+// ============================================================
+const CONTAINER_SVG = {
+  'a carton of': svg(`
+    <defs><linearGradient id="cartBox" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f8f0e0"/><stop offset="100%" stop-color="#d8c8a8"/></linearGradient></defs>
+    <path d="M16 18 L44 18 L44 52 L16 52 Z" fill="url(#cartBox)" stroke="#806040" stroke-width="1.5"/>
+    <path d="M16 18 L30 12 L44 18" fill="#e0d0b0" stroke="#806040" stroke-width="1.5"/>
+    <rect x="22" y="28" width="16" height="16" fill="#fff8e8"/>
+    <path d="M26 36 L30 32 L34 36 L30 40 Z" fill="#806040"/>
+  `),
+  'a bottle of': svg(`
+    <defs><linearGradient id="botGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#88b8e0"/><stop offset="45%" stop-color="#e0f0ff"/><stop offset="100%" stop-color="#6090b0"/></linearGradient></defs>
+    <path d="M24 10 L36 10 L36 20 L40 24 L40 52 Q40 55 37 55 L23 55 Q20 55 20 52 L20 24 L24 20 Z" fill="url(#botGrad)" stroke="#406880" stroke-width="1.5"/>
+    <rect x="25" y="8" width="10" height="4" rx="1" fill="#406880"/>
+    <rect x="22" y="30" width="16" height="14" fill="#fff" opacity="0.7"/>
+    <ellipse cx="25" cy="38" rx="1" ry="8" fill="#fff" opacity="0.7"/>
+  `),
+  'a jar of': svg(`
+    <defs><linearGradient id="jarGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c8d8e0"/><stop offset="45%" stop-color="#f0f8ff"/><stop offset="100%" stop-color="#a0b0c0"/></linearGradient></defs>
+    <rect x="18" y="20" width="24" height="32" rx="4" fill="url(#jarGrad)" stroke="#6080a0" stroke-width="1.5"/>
+    <ellipse cx="30" cy="20" rx="12" ry="4" fill="#d0a870" stroke="#806040" stroke-width="1.5"/>
+    <rect x="18" y="30" width="24" height="14" fill="#fff8e8"/>
+    <ellipse cx="21" cy="38" rx="1" ry="6" fill="#fff" opacity="0.6"/>
+  `),
+  'a box of': svg(`
+    <defs><linearGradient id="boxGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffd890"/><stop offset="100%" stop-color="#d0a040"/></linearGradient></defs>
+    <rect x="14" y="20" width="32" height="30" rx="2" fill="url(#boxGrad)" stroke="#806020" stroke-width="1.5"/>
+    <path d="M14 20 L30 14 L46 20" fill="#e8c070" stroke="#806020" stroke-width="1.5"/>
+    <rect x="18" y="30" width="24" height="12" fill="#fff8e8"/>
+  `),
+  'a packet of': svg(`
+    <defs><linearGradient id="packGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe8b0"/><stop offset="100%" stop-color="#d0a060"/></linearGradient></defs>
+    <path d="M20 18 Q18 20 18 28 L18 50 Q18 54 22 54 L38 54 Q42 54 42 50 L42 28 Q42 20 40 18 Z" fill="url(#packGrad)" stroke="#806020" stroke-width="1.5"/>
+    <path d="M20 18 Q30 14 40 18" fill="#e8c880" stroke="#806020" stroke-width="1.5"/>
+    <ellipse cx="30" cy="38" rx="8" ry="5" fill="#fff8e8"/>
+  `),
+  'a tin of': svg(`
+    <defs><linearGradient id="tinGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#909090"/><stop offset="45%" stop-color="#e0e0e0"/><stop offset="100%" stop-color="#707070"/></linearGradient></defs>
+    <rect x="16" y="22" width="28" height="30" rx="3" fill="url(#tinGrad)" stroke="#505050" stroke-width="1.5"/>
+    <rect x="16" y="26" width="28" height="3" fill="#b0b0b0"/>
+    <rect x="16" y="45" width="28" height="3" fill="#b0b0b0"/>
+    <rect x="20" y="32" width="20" height="10" fill="#fff8e8"/>
+  `),
+  'a can of': svg(`
+    <defs><linearGradient id="canGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#a04040"/><stop offset="45%" stop-color="#ff8888"/><stop offset="100%" stop-color="#802020"/></linearGradient></defs>
+    <path d="M24 12 L36 12 L36 18 L38 22 L38 52 Q38 55 35 55 L25 55 Q22 55 22 52 L22 22 L24 18 Z" fill="url(#canGrad)" stroke="#601010" stroke-width="1.5"/>
+    <rect x="25" y="10" width="10" height="4" fill="#c0c0c0" stroke="#808080" stroke-width="0.5"/>
+    <rect x="24" y="30" width="12" height="12" fill="#fff" opacity="0.8"/>
+  `),
+  'a loaf of': svg(`
+    <defs><linearGradient id="loafGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c888"/><stop offset="100%" stop-color="#c89858"/></linearGradient></defs>
+    <path d="M12 30 Q12 20 20 18 Q30 14 40 18 Q48 20 48 30 L48 48 Q48 52 44 52 L16 52 Q12 52 12 48 Z" fill="url(#loafGrad)" stroke="#806030" stroke-width="1.5"/>
+    <path d="M18 24 Q24 22 30 24 Q36 22 42 24" stroke="#806030" stroke-width="1.2" fill="none"/>
+    <path d="M18 30 Q24 28 30 30 Q36 28 42 30" stroke="#806030" stroke-width="1.2" fill="none"/>
+    <path d="M18 36 Q24 34 30 36 Q36 34 42 36" stroke="#806030" stroke-width="1.2" fill="none"/>
+  `),
+  'a bar of': svg(`
+    <defs><linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6a4030"/><stop offset="100%" stop-color="#3a2010"/></linearGradient></defs>
+    <rect x="12" y="24" width="36" height="18" rx="3" fill="url(#barGrad)" stroke="#2a1008" stroke-width="1.5"/>
+    <rect x="18" y="28" width="8" height="10" fill="#7a5040"/>
+    <rect x="28" y="28" width="8" height="10" fill="#7a5040"/>
+    <rect x="38" y="28" width="8" height="10" fill="#7a5040"/>
+  `),
+  'a bag of': svg(`
+    <defs><linearGradient id="bagGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0e0c0"/><stop offset="100%" stop-color="#c0a880"/></linearGradient></defs>
+    <path d="M18 22 Q14 22 14 30 L14 50 Q14 54 18 54 L42 54 Q46 54 46 50 L46 30 Q46 22 42 22 Z" fill="url(#bagGrad)" stroke="#806040" stroke-width="1.5"/>
+    <path d="M20 22 Q20 14 30 14 Q40 14 40 22" fill="none" stroke="#806040" stroke-width="1.5"/>
+    <rect x="20" y="32" width="20" height="14" fill="#fff8e8"/>
+  `),
+  'a bunch of': svg(`
+    <defs><radialGradient id="bunchGrape" cx="35%" cy="35%"><stop offset="0%" stop-color="#d080d0"/><stop offset="100%" stop-color="#701870"/></radialGradient></defs>
+    <path d="M30 14 L30 24" stroke="#604010" stroke-width="2"/>
+    <path d="M30 18 Q36 16 40 20" stroke="#60a040" stroke-width="2" fill="none"/>
+    <circle cx="24" cy="30" r="5" fill="url(#bunchGrape)"/>
+    <circle cx="30" cy="30" r="5" fill="url(#bunchGrape)"/>
+    <circle cx="36" cy="30" r="5" fill="url(#bunchGrape)"/>
+    <circle cx="27" cy="40" r="5" fill="url(#bunchGrape)"/>
+    <circle cx="33" cy="40" r="5" fill="url(#bunchGrape)"/>
+  `),
+  'a tub of': svg(`
+    <defs><linearGradient id="tubG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff8e8"/><stop offset="100%" stop-color="#d0c0a0"/></linearGradient></defs>
+    <path d="M16 24 L44 24 L42 50 Q42 54 38 54 L22 54 Q18 54 18 50 Z" fill="url(#tubG)" stroke="#806040" stroke-width="1.5"/>
+    <ellipse cx="30" cy="24" rx="14" ry="4" fill="#fff" stroke="#806040" stroke-width="1"/>
+    <rect x="20" y="34" width="20" height="12" fill="#ffb8d8"/>
+  `),
+  'a slice of': svg(`
+    <defs><linearGradient id="sliceG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe87a"/><stop offset="100%" stop-color="#c0a020"/></linearGradient></defs>
+    <path d="M10 34 L30 22 L50 34 L46 46 L30 52 L14 46 Z" fill="url(#sliceG)" stroke="#806020" stroke-width="1.5"/>
+    <path d="M10 34 L30 22 L50 34" fill="#fff0a0" stroke="#806020" stroke-width="1.5"/>
+    <circle cx="22" cy="38" r="2.5" fill="#c0a020" opacity="0.7"/>
+    <circle cx="34" cy="40" r="2.5" fill="#c0a020" opacity="0.7"/>
+  `),
+  'a dozen of': svg(`
+    <defs><linearGradient id="dozG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e8c8a0"/><stop offset="100%" stop-color="#c8a878"/></linearGradient></defs>
+    <rect x="12" y="18" width="36" height="32" rx="4" fill="url(#dozG)" stroke="#806040" stroke-width="1.5"/>
+    <ellipse cx="20" cy="26" rx="5" ry="4" fill="#fff8e8"/>
+    <ellipse cx="30" cy="26" rx="5" ry="4" fill="#fff8e8"/>
+    <ellipse cx="40" cy="26" rx="5" ry="4" fill="#fff8e8"/>
+    <ellipse cx="20" cy="38" rx="5" ry="4" fill="#fff8e8"/>
+    <ellipse cx="30" cy="38" rx="5" ry="4" fill="#fff8e8"/>
+    <ellipse cx="40" cy="38" rx="5" ry="4" fill="#fff8e8"/>
+  `),
+  'a piece of': svg(`
+    <defs><linearGradient id="pieceG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff0f8"/><stop offset="100%" stop-color="#ffb8d8"/></linearGradient></defs>
+    <path d="M30 12 L46 22 L46 42 L30 52 L14 42 L14 22 Z" fill="url(#pieceG)" stroke="#806040" stroke-width="1.5"/>
+    <path d="M30 12 L46 22 L30 32 L14 22 Z" fill="#fff8fc" stroke="#806040" stroke-width="1.5"/>
+    <circle cx="30" cy="42" r="3" fill="#ff3355"/>
+  `)
+};
+
+// ============================================================
+//  ДАННЫЕ ТОВАРОВ
+// ============================================================
+const ITEMS = [
+  { id: 'milk',       name: 'milk',        container: 'a carton of' },
+  { id: 'juice',      name: 'juice',       container: 'a carton of' },
+  { id: 'cream',      name: 'cream',       container: 'a carton of' },
+  { id: 'eggs12',     name: 'eggs',        container: 'a dozen of' },
+  { id: 'water',      name: 'water',       container: 'a bottle of' },
+  { id: 'oil',        name: 'olive oil',   container: 'a bottle of' },
+  { id: 'ketchup',    name: 'ketchup',     container: 'a bottle of' },
+  { id: 'wine',       name: 'wine',        container: 'a bottle of' },
+  { id: 'soda',       name: 'soda',        container: 'a bottle of' },
+  { id: 'shampoo',    name: 'shampoo',     container: 'a bottle of' },
+  { id: 'jam',        name: 'jam',         container: 'a jar of' },
+  { id: 'honey',      name: 'honey',       container: 'a jar of' },
+  { id: 'coffee',     name: 'coffee',      container: 'a jar of' },
+  { id: 'pickles',    name: 'pickles',     container: 'a jar of' },
+  { id: 'olives',     name: 'olives',      container: 'a jar of' },
+  { id: 'cereal',     name: 'cereal',      container: 'a box of' },
+  { id: 'tea',        name: 'tea',         container: 'a box of' },
+  { id: 'chocolates', name: 'chocolates',  container: 'a box of' },
+  { id: 'pizza',      name: 'pizza',       container: 'a box of' },
+  { id: 'chips',      name: 'chips',       container: 'a packet of' },
+  { id: 'pasta',      name: 'pasta',       container: 'a packet of' },
+  { id: 'butter',     name: 'butter',      container: 'a packet of' },
+  { id: 'biscuits',   name: 'biscuits',    container: 'a packet of' },
+  { id: 'crisps',     name: 'crisps',      container: 'a packet of' },
+  { id: 'soup',       name: 'soup',        container: 'a tin of' },
+  { id: 'beans',      name: 'beans',       container: 'a tin of' },
+  { id: 'tuna',       name: 'tuna',        container: 'a tin of' },
+  { id: 'cola',       name: 'cola',        container: 'a can of' },
+  { id: 'beer',       name: 'beer',        container: 'a can of' },
+  { id: 'bread',      name: 'bread',       container: 'a loaf of' },
+  { id: 'chocolate',  name: 'chocolate',   container: 'a bar of' },
+  { id: 'soap',       name: 'soap',        container: 'a bar of' },
+  { id: 'flour',      name: 'flour',       container: 'a bag of' },
+  { id: 'sugar',      name: 'sugar',       container: 'a bag of' },
+  { id: 'rice',       name: 'rice',        container: 'a bag of' },
+  { id: 'potatoes',   name: 'potatoes',    container: 'a bag of' },
+  { id: 'apples',     name: 'apples',      container: 'a bag of' },
+  { id: 'grapes',     name: 'grapes',      container: 'a bunch of' },
+  { id: 'bananas',    name: 'bananas',     container: 'a bunch of' },
+  { id: 'carrots',    name: 'carrots',     container: 'a bunch of' },
+  { id: 'icecream',   name: 'ice cream',   container: 'a tub of' },
+  { id: 'yogurt',     name: 'yogurt',      container: 'a tub of' },
+  { id: 'cheese',     name: 'cheese',      container: 'a slice of' },
+  { id: 'ham',        name: 'ham',         container: 'a slice of' },
+  { id: 'fruit',      name: 'fruit',       container: 'a piece of' },
+  { id: 'cake',       name: 'cake',        container: 'a piece of' },
+  { id: 'candy',      name: 'candy',       container: 'a piece of' }
+];
+
+const ALL_CONTAINERS = Object.keys(CONTAINER_SVG);
+
+const DIFFICULTY = {
+  easy:   { time: 20, options: 3, points: 10 },
+  medium: { time: 12, options: 5, points: 15 },
+  hard:   { time: 8,  options: 7, points: 20 }
+};
+
+const PHRASES_OK = ['Yummy! 🎉', 'Got it! ✨', 'Perfect! 💕', 'Nice! 🌸', 'Super! ⭐'];
+const PHRASES_ERR = ['Hmm... try again! 🤔', 'Oops! 😅', 'Not quite... 💭', 'Almost! 🌷'];
+
+const CHARACTER_SVG = svg(`
+  <defs>
+    <radialGradient id="faceGrad" cx="50%" cy="45%">
+      <stop offset="0%" stop-color="#fff0e0"/>
+      <stop offset="100%" stop-color="#f0c8a8"/>
+    </radialGradient>
+    <linearGradient id="hairGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8a5030"/>
+      <stop offset="100%" stop-color="#5a3018"/>
+    </linearGradient>
+    <linearGradient id="dressGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffa8c8"/>
+      <stop offset="100%" stop-color="#ff6b9d"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="30" cy="34" rx="20" ry="20" fill="url(#hairGrad)"/>
+  <ellipse cx="30" cy="34" rx="16" ry="16" fill="url(#faceGrad)"/>
+  <circle cx="21" cy="38" r="3" fill="#ffb8c8" opacity="0.7"/>
+  <circle cx="39" cy="38" r="3" fill="#ffb8c8" opacity="0.7"/>
+  <ellipse cx="24" cy="33" rx="2.2" ry="2.8" fill="#3a2010"/>
+  <ellipse cx="36" cy="33" rx="2.2" ry="2.8" fill="#3a2010"/>
+  <circle cx="24.8" cy="32" r="0.9" fill="#fff"/>
+  <circle cx="36.8" cy="32" r="0.9" fill="#fff"/>
+  <path d="M25 40 Q30 44 35 40" stroke="#c06060" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M14 28 Q18 16 30 16 Q42 16 46 28 Q42 22 30 22 Q18 22 14 28" fill="url(#hairGrad)"/>
+  <path d="M40 16 Q44 12 48 16 Q44 18 40 16 Z" fill="#ff6b9d"/>
+  <path d="M40 16 Q44 20 48 16 Q44 14 40 16 Z" fill="#ff8db5"/>
+  <circle cx="44" cy="16" r="1.5" fill="#c04070"/>
+  <path d="M18 50 Q18 46 30 46 Q42 46 42 50 L44 60 L16 60 Z" fill="url(#dressGrad)"/>
+  <path d="M22 50 L30 56 L38 50" stroke="#c04070" stroke-width="1" fill="none"/>
+`, "0 0 60 60");
+
+const CART_SVG = svg(`
+  <defs>
+    <linearGradient id="cartGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffa8c8"/>
+      <stop offset="100%" stop-color="#ff6b9d"/>
+    </linearGradient>
+  </defs>
+  <path d="M8 20 L14 20 L20 44" stroke="#8090a0" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M14 26 L50 26 L46 46 L20 46 Z" fill="url(#cartGrad)" stroke="#c04070" stroke-width="2"/>
+  <path d="M22 26 L22 46 M30 26 L30 46 M38 26 L38 46 M44 26 L44 46" stroke="#c04070" stroke-width="1"/>
+  <path d="M16 33 L48 33 M17 40 L47 40" stroke="#c04070" stroke-width="1"/>
+  <circle cx="24" cy="52" r="4" fill="#5a5a6a"/>
+  <circle cx="24" cy="52" r="1.5" fill="#c0c0d0"/>
+  <circle cx="42" cy="52" r="4" fill="#5a5a6a"/>
+  <circle cx="42" cy="52" r="1.5" fill="#c0c0d0"/>
+`, "0 0 60 60");
+
+const WIN_SVG = svg(`
+  <circle cx="30" cy="30" r="26" fill="#ffe8f0" stroke="#ff6b9d" stroke-width="3"/>
+  <text x="30" y="40" text-anchor="middle" font-size="24">🎉</text>
+`, "0 0 60 60");
+
+// ============================================================
+//  СОСТОЯНИЕ
+// ============================================================
+let state = {
+  targetItems: [], collected: [], score: 0, mistakes: 0,
+  diff: 'easy', timer: null, timeLeft: 0, locked: false,
+  locationIndex: 0
+};
+
+const $ = id => document.getElementById(id);
+const $list = $('list'), $shelf = $('shelf'), $containers = $('containers');
+const $message = $('message'), $score = $('score'), $progress = $('progress');
+const $mistakes = $('mistakes'), $timer = $('timer'), $timerBox = $('timerBox');
+const $winScreen = $('winScreen'), $finalMsg = $('finalMsg'), $restartBtn = $('restartBtn');
+const $speech = $('speech'), $character = $('character'), $cart = $('cart');
+const $locIcon = $('locIcon'), $locName = $('locName'), $locBg = $('locBg');
+
+const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+
+// ============================================================
+//  ОТРИСОВКА ЛОКАЦИИ
+// ============================================================
+function renderLocation(locKey) {
+  const loc = LOCATIONS[locKey];
+  $locIcon.innerHTML = LOCATION_ICONS[loc.icon];
+  $locName.textContent = loc.name;
+  $locBg.style.backgroundImage = `url('${LOCATION_BG[locKey]}')`;
+  $locBg.style.opacity = '1';
+}
+
+// ============================================================
+//  СТАРТ
+// ============================================================
+function startGame() {
+  clearInterval(state.timer);
+  state.locationIndex = 0;
+  const locKey = LOCATION_ORDER[state.locationIndex];
+  const loc = LOCATIONS[locKey];
+
+  const pool = loc.items.map(id => ITEMS.find(i => i.id === id)).filter(Boolean);
+  const targets = shuffle(pool).slice(0, Math.min(6, pool.length));
+
+  state = {
+    ...state,
+    targetItems: targets.map(t => t.id),
+    collected: [], score: 0, mistakes: 0,
+    timer: null, timeLeft: 0, locked: false
+  };
+
+  renderLocation(locKey);
+  setupRound(targets);
+  updateStats();
+  hideMessage();
+  hideSpeech();
+  $winScreen.classList.remove('active');
+  $restartBtn.style.display = 'block';
+  $character.innerHTML = CHARACTER_SVG;
+  $cart.innerHTML = CART_SVG;
+  $winScreen.querySelector('#winPic').innerHTML = WIN_SVG;
+}
+
+function setupRound(targets) {
+  const locKey = LOCATION_ORDER[state.locationIndex];
+  const loc = LOCATIONS[locKey];
+
+  let shelfItems = [...targets];
+  const extras = shuffle(
+    loc.items.map(id => ITEMS.find(i => i.id === id))
+      .filter(i => i && !targets.find(t => t.id === i.id))
+  );
+  while (shelfItems.length < 12 && extras.length) shelfItems.push(extras.shift());
+  if (shelfItems.length < 8) {
+    const globalExtras = shuffle(ITEMS.filter(i => !shelfItems.find(s => s.id === i.id)));
+    while (shelfItems.length < 8 && globalExtras.length) shelfItems.push(globalExtras.shift());
+  }
+  shelfItems = shuffle(shelfItems);
+
+  renderList();
+  renderShelf(shelfItems);
+  renderContainers();
+}
+
+function nextLocation() {
+  state.locationIndex = (state.locationIndex + 1) % LOCATION_ORDER.length;
+  const locKey = LOCATION_ORDER[state.locationIndex];
+  const loc = LOCATIONS[locKey];
+
+  const pool = loc.items.map(id => ITEMS.find(i => i.id === id)).filter(Boolean);
+  const targets = shuffle(pool).slice(0, Math.min(6, pool.length));
+  state.targetItems = targets.map(t => t.id);
+  state.collected = [];
+  state.locked = false;
+
+  $locBg.style.opacity = '0';
+  setTimeout(() => {
+    renderLocation(locKey);
+  }, 300);
+
+  setTimeout(() => {
+    setupRound(targets);
+    updateStats();
+    hideMessage();
+    hideSpeech();
+  }, 500);
+}
+
+function renderList() {
+  $list.innerHTML = '';
+  state.targetItems.forEach(id => {
+    const item = ITEMS.find(i => i.id === id);
+    const li = document.createElement('li');
+    li.innerHTML = `<span style="width:18px;height:18px;display:inline-block;">${ITEM_SVG[id] || ''}</span>${item.name}`;
+    if (state.collected.includes(id)) li.classList.add('done');
+    $list.appendChild(li);
+  });
+}
+
+function renderShelf(items) {
+  $shelf.innerHTML = '';
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.dataset.id = item.id;
+    div.draggable = true;
+    if (state.collected.includes(item.id)) div.classList.add('collected');
+    div.innerHTML = `<div class="pic">${ITEM_SVG[item.id] || ''}</div><span class="name">${item.name}</span>`;
+
+    div.addEventListener('dragstart', e => {
+      if (state.locked || state.collected.includes(item.id)) { e.preventDefault(); return; }
+      e.dataTransfer.setData('text/plain', item.id);
+      div.classList.add('dragging');
+      startTimer();
+    });
+    div.addEventListener('dragend', () => div.classList.remove('dragging'));
+
+    div.addEventListener('touchstart', handleTouchStart, { passive: false });
+    div.addEventListener('touchmove', handleTouchMove, { passive: false });
+    div.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+    $shelf.appendChild(div);
+  });
+}
+
+function renderContainers() {
+  const needed = new Set(state.targetItems.map(id => {
+    const it = ITEMS.find(i => i.id === id);
+    return it ? it.container : null;
+  }).filter(Boolean));
+
+  const cfg = DIFFICULTY[state.diff];
+  const pool = ALL_CONTAINERS.filter(c => !needed.has(c));
+  const extras = shuffle(pool).slice(0, Math.max(0, cfg.options - needed.size));
+  const containers = shuffle([...needed, ...extras]);
+
+  $containers.innerHTML = '';
+  containers.forEach(name => {
+    const div = document.createElement('div');
+    div.className = 'container';
+    div.dataset.container = name;
+    div.innerHTML = `<div class="icon">${CONTAINER_SVG[name] || ''}</div><span>${name}</span>`;
+
+    div.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!state.locked) div.classList.add('drop-hover');
+    });
+    div.addEventListener('dragleave', () => div.classList.remove('drop-hover'));
+    div.addEventListener('drop', e => {
+      e.preventDefault();
+      div.classList.remove('drop-hover');
+      handleDrop(e.dataTransfer.getData('text/plain'), name, div);
+    });
+    $containers.appendChild(div);
+  });
+}
+
+let touchItem = null, touchGhost = null;
+function handleTouchStart(e) {
+  if (state.locked) return;
+  const el = e.currentTarget;
+  const itemId = el.dataset.id;
+  if (state.collected.includes(itemId)) return;
+  e.preventDefault();
+  touchItem = { id: itemId, el };
+  el.classList.add('dragging');
+  const touch = e.touches[0];
+  const rect = el.getBoundingClientRect();
+  touchGhost = el.cloneNode(true);
+  Object.assign(touchGhost.style, {
+    position: 'fixed',
+    left: (touch.clientX - rect.width / 2) + 'px',
+    top: (touch.clientY - rect.height / 2) + 'px',
+    width: rect.width + 'px', zIndex: 9999,
+    pointerEvents: 'none', opacity: 0.9, background: '#fff'
+  });
+  document.body.appendChild(touchGhost);
+  startTimer();
+}
+function handleTouchMove(e) {
+  if (!touchItem) return;
+  e.preventDefault();
+  const touch = e.touches[0];
+  if (touchGhost) {
+    touchGhost.style.left = (touch.clientX - touchGhost.offsetWidth / 2) + 'px';
+    touchGhost.style.top = (touch.clientY - touchGhost.offsetHeight / 2) + 'px';
+  }
+  document.querySelectorAll('.container').forEach(c => c.classList.remove('drop-hover'));
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const cont = el && el.closest('.container');
+  if (cont) cont.classList.add('drop-hover');
+}
+function handleTouchEnd(e) {
+  if (!touchItem) return;
+  e.preventDefault();
+  const touch = e.changedTouches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const cont = el && el.closest('.container');
+  document.querySelectorAll('.container').forEach(c => c.classList.remove('drop-hover'));
+  if (touchGhost) touchGhost.remove();
+  if (touchItem.el) touchItem.el.classList.remove('dragging');
+  if (cont) handleDrop(touchItem.id, cont.dataset.container, cont);
+  touchItem = null; touchGhost = null;
+}
+
+function handleDrop(itemId, containerName, dropEl) {
+  if (state.locked) return;
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item || state.collected.includes(itemId)) return;
+  const cfg = DIFFICULTY[state.diff];
+  state.locked = true;
+  stopTimer();
+
+  if (item.container === containerName) {
+    dropEl.classList.add('correct');
+    state.score += cfg.points;
+    state.collected.push(itemId);
+    showMessage(`✅ Correct! ${item.container} ${item.name}`, 'ok');
+    showSpeech(PHRASES_OK[Math.floor(Math.random() * PHRASES_OK.length)]);
+    $cart.classList.add('bump');
+    setTimeout(() => $cart.classList.remove('bump'), 400);
+    const shelfEl = document.querySelector(`.item[data-id="${itemId}"]`);
+    if (shelfEl) shelfEl.classList.add('collected');
+    renderList();
+    updateStats();
+    setTimeout(() => {
+      dropEl.classList.remove('correct');
+      state.locked = false;
+      hideSpeech();
+      if (state.collected.length === state.targetItems.length) {
+        setTimeout(nextLocation, 500);
+      }
+    }, 1100);
+  } else {
+    dropEl.classList.add('wrong');
+    state.mistakes += 1;
+    state.score = Math.max(0, state.score - 5);
+    updateStats();
+    showMessage(`❌ Oops! "${item.name}" goes in "${item.container}"`, 'err');
+    showSpeech(PHRASES_ERR[Math.floor(Math.random() * PHRASES_ERR.length)]);
+    setTimeout(() => {
+      dropEl.classList.remove('wrong');
+      state.locked = false;
+      hideSpeech();
+    }, 1300);
+  }
+}
+
+function startTimer() {
+  if (state.timer || state.locked) return;
+  const cfg = DIFFICULTY[state.diff];
+  state.timeLeft = cfg.time;
+  updateTimer();
+  state.timer = setInterval(() => {
+    state.timeLeft--;
+    updateTimer();
+    if (state.timeLeft <= 0) timeOut();
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(state.timer);
+  state.timer = null;
+  $timerBox.classList.remove('warn');
+}
+function updateTimer() {
+  $timer.textContent = state.timeLeft + 's';
+  $timerBox.classList.toggle('warn', state.timeLeft <= 3);
+}
+function timeOut() {
+  stopTimer();
+  state.mistakes += 1;
+  state.score = Math.max(0, state.score - 3);
+  updateStats();
+  showMessage('⏰ Time is up! Try the next item.', 'err');
+  showSpeech('Hurry up! ⏰');
+  state.locked = true;
+  setTimeout(() => { state.locked = false; hideMessage(); hideSpeech(); }, 1200);
+}
+function showMessage(text, type) {
+  $message.textContent = text;
+  $message.className = 'message ' + type;
+}
+function hideMessage() { $message.textContent = ''; $message.className = 'message'; }
+function showSpeech(text) { $speech.textContent = text; $speech.classList.add('show'); }
+function hideSpeech() { $speech.classList.remove('show'); }
+function updateStats() {
+  $score.textContent = state.score;
+  $progress.textContent = `${state.collected.length}/${state.targetItems.length}`;
+  $mistakes.textContent = state.mistakes;
+}
+
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.diff = btn.dataset.diff;
+    startGame();
+  });
+});
+
+startGame();
+</script>
+</body>
+</html>
